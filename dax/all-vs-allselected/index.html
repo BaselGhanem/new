@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DAX Lab | ALL vs ALLSELECTED</title><meta name="description" content="تجربة تفاعلية لفهم ALL و ALLSELECTED">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f1f6f7;color:#17333b;font-family:Tahoma,Arial,sans-serif}
+main{max-width:1000px;padding:20px;margin:auto}
+header{background:linear-gradient(120deg,#102d35,#0b6265);color:white;padding:28px;border-radius:22px}
+small{color:#83dcd4;font-weight:bold}h1{font-size:clamp(32px,6vw,58px);direction:ltr;text-align:right;margin:10px 0}
+header p{line-height:1.8;font-size:16px}.card{background:white;border:1px solid #dce8ea;border-radius:19px;padding:23px;margin-top:16px}
+p{line-height:1.8}h2{font-size:21px}button{background:#eef7f7;color:#16494d;border:1px solid #bedcdd;border-radius:11px;padding:13px 20px;margin:3px;font-weight:bold;cursor:pointer}
+button[aria-pressed="true"]{background:#099999;color:white}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.metric{border:1px solid #dce6e8;border-radius:16px;padding:22px;text-align:center}
+.metric h3{direction:ltr;font-size:24px;margin:5px}
+.value{font-size:clamp(39px,6vw,65px);font-weight:900;color:#099999;direction:ltr;margin:14px}
+.formula{direction:ltr;font-weight:700;color:#3a6971}.bar{height:10px;background:#dbe9e9;border-radius:99px;margin:20px 0;overflow:hidden}
+.bar div{background:#099999;height:100%;transition:width .2s}
+summary{cursor:pointer;font-weight:bold}pre{background:#14333d;color:white;padding:16px;direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:12px}
+table{width:100%;border-collapse:collapse;margin-top:15px}th,td{text-align:right;border-bottom:1px solid #e1ebed;padding:12px}th:nth-child(n+2),td:nth-child(n+2){text-align:left;direction:ltr}tr:last-child{font-weight:bold;background:#f0f9f7}
+.notice{font-size:13px;color:#56777d}footer{text-align:center;color:#637c7f;padding:30px;font-size:12px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}.card{padding:16px}button{padding:12px}}
+</style></head><body><main>
+<header><small>POWER BI · DAX TIPS 05 · INTERACTIVE LAB</small><h1>ALL vs ALLSELECTED</h1><p>نفس مبيعات عمان، مرة 40% ومرة 57.14%، والاثنين صح — غير المناطق وشوف النتيجة بعينك</p></header>
+<section class="card"><h2>اختار المناطق</h2><p>مبيعات عمان 200,000 واربد 150,000 والزرقاء 150,000 — مجموع الشركة 500,000 دينار</p>
+<div id="buttons"><button data-id="Amman" aria-pressed="true">عمان ✓</button><button data-id="Irbid" aria-pressed="true">اربد ✓</button><button data-id="Zarqa" aria-pressed="false">الزرقاء</button></div>
+<p>اجمالي المناطق المختارة <strong id="selectedTotal" dir="ltr">350,000</strong></p>
+<div class="grid">
+<div class="metric"><h3>ALL</h3><p>مساهمة عمان من كل المناطق</p><div id="allPct" class="value">40%</div><div class="bar"><div id="allBar" style="width:40%"></div></div><div id="allFormula" class="formula">200,000 ÷ 500,000</div></div>
+<div class="metric"><h3>ALLSELECTED</h3><p>مساهمة عمان من المناطق المختارة</p><div id="selPct" class="value">57.14%</div><div class="bar"><div id="selBar" style="width:57.14%"></div></div><div id="selFormula" class="formula">200,000 ÷ 350,000</div></div>
+</div>
+<p class="notice">النتائج المعروضة لصف عمان ضمن Matrix — لو شلت عمان من الاختيار، بطاقاتها بتختفي لان صف عمان ما عاد ظاهر</p>
+<table><thead><tr><th>المنطقة</th><th>المبيعات</th><th>ALL</th><th>ALLSELECTED</th></tr></thead><tbody id="rows"></tbody></table></section>
+<section class="card"><h2>وين الفرق في DAX؟</h2><p>ALL بتزيل فلتر عمود المنطقة من المقام، بينما ALLSELECTED في المثال بتستخدم مجموعة المناطق المختارة خارج صف الـ Matrix</p>
+<div class="grid"><div><h3>ALL</h3><pre>Share of All Regions =
+DIVIDE(
+ [Total Sales],
+ CALCULATE(
+  [Total Sales],
+  ALL(DimRegion[Region])
+ )
+)</pre></div>
+<div><h3>ALLSELECTED</h3><pre>Share of Selected Regions =
+DIVIDE(
+ [Total Sales],
+ CALCULATE(
+  [Total Sales],
+  ALLSELECTED(DimRegion[Region])
+ )
+)</pre></div></div>
+<p class="notice">المثال يفترض وجود علاقة صحيحة بين DimRegion و Sales، وان الـ Slicer وصفوف الـ Matrix يستخدمان DimRegion[Region] بدون فلاتر اضافية — سلوك ALLSELECTED يعتمد على سياق الاستعلام وقد يختلف في النماذج المعقدة</p>
+</section><footer>Basel Ghanem · X Academy · Learn Analyse Lead</footer></main>
+<script>
+const regions=[{id:'Amman',name:'عمان',sales:200000},{id:'Irbid',name:'اربد',sales:150000},{id:'Zarqa',name:'الزرقاء',sales:150000}];
+const chosen=new Set(['Amman','Irbid']);
+const get=id=>document.getElementById(id);
+const fmt=n=>n.toLocaleString('en-US');
+const pct=n=>(n*100).toFixed(2).replace(/\.00$/,'')+'%';
+function render(){
+ const total=regions.reduce((n,r)=>n+(chosen.has(r.id)?r.sales:0),0);
+ const hasAmman=chosen.has('Amman');
+ get('selectedTotal').textContent=fmt(total);
+ get('allPct').textContent=hasAmman?'40%':'—';
+ get('allFormula').textContent=hasAmman?'200,000 ÷ 500,000':'عمان غير مختارة';
+ get('allBar').style.width=hasAmman?'40%':'0';
+ get('selPct').textContent=hasAmman?pct(200000/total):'—';
+ get('selFormula').textContent=hasAmman?'200,000 ÷ '+fmt(total):'عمان غير مختارة';
+ get('selBar').style.width=hasAmman?(200000/total*100)+'%':'0';
+ document.querySelectorAll('[data-id]').forEach(b=>{let yes=chosen.has(b.dataset.id);b.setAttribute('aria-pressed',String(yes));b.textContent=regions.find(r=>r.id===b.dataset.id).name+(yes?' ✓':'')});
+ let rows=regions.filter(r=>chosen.has(r.id)).map(r=>'<tr><td>'+r.name+'</td><td>'+fmt(r.sales)+'</td><td>'+pct(r.sales/500000)+'</td><td>'+pct(r.sales/total)+'</td></tr>').join('');
+ if(total)rows+='<tr><td>الاجمالي</td><td>'+fmt(total)+'</td><td>'+pct(total/500000)+'</td><td>100%</td></tr>';
+ get('rows').innerHTML=rows||'<tr><td colspan="4">ما في مناطق مختارة</td></tr>';
+}
+document.querySelectorAll('[data-id]').forEach(b=>b.addEventListener('click',()=>{chosen.has(b.dataset.id)?chosen.delete(b.dataset.id):chosen.add(b.dataset.id);render()}));
+render();
+</script></body></html>
